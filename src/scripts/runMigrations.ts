@@ -1,6 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { pool } from '../db/pool';
+import { logger } from '../utils/logger';
 
 const migrationsDir = path.resolve(__dirname, '../../db/migrations');
 
@@ -40,7 +41,7 @@ const runMigrations = async () => {
     const filePath = path.join(migrationsDir, file);
     const sql = await fs.readFile(filePath, 'utf8');
 
-    console.log(`Applying migration: ${file}`);
+    logger.info('applying_migration', { file });
 
     try {
       await pool.query('BEGIN');
@@ -57,13 +58,13 @@ const runMigrations = async () => {
 const run = async () => {
   try {
     await runMigrations();
-    console.log('Migrations complete');
+    logger.info('migrations_complete');
   } finally {
     await pool.end();
   }
 };
 
 run().catch((error) => {
-  console.error('Migration failed:', error);
+  logger.error('migration_failed', { error: error instanceof Error ? { name: error.name, message: error.message, stack: error.stack } : error });
   process.exitCode = 1;
 });

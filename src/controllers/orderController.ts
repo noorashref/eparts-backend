@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { z } from 'zod';
 import { createOrder, OrderError } from '../services/orderService';
 import { sendOrderConfirmationEmail } from '../services/emailService';
+import { logger } from '../utils/logger';
 
 const orderItemSchema = z.object({
   itemId: z.number().int().positive(),
@@ -49,9 +50,20 @@ export const createOrderHandler = async (req: Request, res: Response) => {
         totalAmount: Number(result.order.total_amount ?? 0),
         notes,
       });
+      logger.info('order_email_sent', { orderId: result.order.id, to: customerEmail });
     } catch (emailError) {
-      console.error('Failed to send order confirmation email', emailError);
+      logger.error('order_email_failed', {
+        orderId: result.order.id,
+        error: emailError instanceof Error ? { name: emailError.name, message: emailError.message, stack: emailError.stack } : emailError,
+      });
     }
+
+    logger.info('order_created', {
+      orderId: result.order.id,
+      userId: req.user.userId,
+      itemsCount: result.items.length,
+      totalAmount: Number(result.order.total_amount ?? 0),
+    });
 
     return res.status(201).json({
       order: {
@@ -75,7 +87,9 @@ export const createOrderHandler = async (req: Request, res: Response) => {
       return res.status(error.statusCode).json({ message: error.message });
     }
 
-    console.error('Failed to create order', error);
+    logger.error('order_create_failed', {
+      error: error instanceof Error ? { name: error.name, message: error.message, stack: error.stack } : error,
+    });
     return res.status(500).json({ message: 'Unable to create order' });
   }
 };

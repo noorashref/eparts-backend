@@ -1,5 +1,6 @@
 import { Pool } from 'pg';
 import { env } from '../config/env';
+import { logger } from '../utils/logger';
 
 export const pool = new Pool({
   connectionString: env.databaseUrl,
@@ -7,5 +8,5 @@ export const pool = new Pool({
 });
 
 pool.on('error', (err) => {
-  console.error('Unexpected PostgreSQL client error', err);
+  logger.error('pg_client_error', { error: { name: err.name, message: err.message, stack: err.stack } });
 });

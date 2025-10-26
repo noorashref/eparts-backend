@@ -1,5 +1,6 @@
 import { env } from '../config/env';
 import { pool } from '../db/pool';
+import { logger } from '../utils/logger';
 import { createUser, findUserByEmail } from '../services/userService';
 import { createCategory } from '../services/categoryService';
 import { createItem } from '../services/itemService';
@@ -230,9 +231,9 @@ const seed = async () => {
 
       if (!existingAdmin) {
         await createUser(normalized, password, 'admin');
-        console.log(`Admin user created: ${normalized}`);
+        logger.info('admin_created', { email: normalized });
       } else {
-        console.log(`Admin user already exists: ${normalized}`);
+        logger.info('admin_exists', { email: normalized });
       }
     }
 
@@ -247,7 +248,7 @@ const seed = async () => {
 
       const created = await createCategory(category.name, category.description ?? undefined);
       categoryNameToId.set(created.name, created.id);
-      console.log(`Category created: ${created.name}`);
+      logger.info('category_created', { name: created.name, id: created.id });
     }
 
     for (const item of defaultItems) {
@@ -271,12 +272,12 @@ const seed = async () => {
         imageUrl: item.imageUrl,
         description: item.description,
       });
-      console.log(`Item created: ${item.name}`);
+      logger.info('item_created', { name: item.name, categoryId });
     }
 
-    console.log('Database seeded successfully');
+    logger.info('seed_complete');
   } catch (error) {
-    console.error('Failed to seed database:', error);
+    logger.error('seed_failed', { error: error instanceof Error ? { name: error.name, message: error.message, stack: error.stack } : error });
     process.exitCode = 1;
   } finally {
     await pool.end();
